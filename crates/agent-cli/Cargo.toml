@@ -1,0 +1,14 @@
+[package]
+name = "agent-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "agent"
+path = "src/main.rs"
+
+[dependencies]
+agent-core = { path = "../agent-core" }
+

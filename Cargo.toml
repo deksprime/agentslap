@@ -1,0 +1,58 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/agent-core",
+    "crates/agent-llm",
+    "crates/agent-session",
+    "crates/agent-tools",
+    "crates/agent-guardrails",
+    "crates/agent-hitl",
+    "crates/agent-context",
+    "crates/agent-mcp",
+    "crates/agent-comms",
+    "crates/agent-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yourusername/agent-runtime"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1.42", features = ["full"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "stream"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging and tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Config management
+config = "0.14"
+
+# Storage
+dashmap = "6.1"
+moka = { version = "0.12", features = ["future"] }
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "migrate"] }
+
+# Testing
+mockall = "0.13"
+wiremock = "0.6"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = true

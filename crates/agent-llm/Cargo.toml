@@ -1,0 +1,10 @@
+[package]
+name = "agent-llm"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# To be added in Phase 1
+
