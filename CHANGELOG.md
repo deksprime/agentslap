@@ -7,11 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 1 - Coming Soon
-- LLM Provider abstraction
-- OpenAI integration
-- Anthropic integration
-- Streaming support
+### Phase 2 - Coming Soon
+- Message & Conversation Management
+- Multi-turn conversation handling
+- Token counting utilities
+
+## [0.2.0] - 2025-12-01
+
+### Added - Phase 1: LLM Provider Abstraction
+
+#### Core Infrastructure (`agent-llm`)
+- `LLMProvider` trait for model-agnostic LLM interactions
+- Async trait support with `async-trait`
+- Provider factory pattern for runtime selection
+- Comprehensive error types with retry-ability detection
+
+#### OpenAI Provider
+- Full OpenAI API integration
+- Support for all chat models (GPT-4, GPT-3.5-turbo, etc.)
+- Non-streaming completion
+- Streaming completion with Server-Sent Events
+- Automatic retry with exponential backoff
+- Rate limit handling with retry-after header support
+- Configurable timeouts
+- Token usage tracking
+
+#### Anthropic Provider  
+- Full Anthropic (Claude) API integration
+- Support for Claude 3 models (Opus, Sonnet, Haiku)
+- Non-streaming completion
+- Streaming completion with Server-Sent Events
+- System message handling (separate parameter)
+- Automatic retry with exponential backoff
+- Rate limit handling
+- Token usage tracking
+
+#### Features
+- Message types (System, User, Assistant)
+- Response types with token usage
+- Stream chunk types
+- Error handling with retry logic
+- HTTP timeout support
+- Environment-based API key management
+- Provider abstraction layer
+
+#### Testing
+- 18 unit tests (100% pass)
+- 3 doc tests (100% pass)
+- Mock provider for testing
+- Provider creation tests
+- Message formatting tests
+- Error handling tests
+
+#### Examples
+- Basic completion example (both providers)
+- Streaming completion example (both providers)
+- Provider switching demonstration
+
+#### Documentation
+- Comprehensive rustdoc for all public APIs
+- README for agent-llm crate
+- Usage examples in documentation
+- API integration guides
 
 ## [0.1.0] - 2025-12-01
 

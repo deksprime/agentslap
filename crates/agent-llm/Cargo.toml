@@ -6,5 +6,34 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-# To be added in Phase 1
+# Async runtime
+tokio = { workspace = true }
 
+# HTTP client
+reqwest = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Async trait support
+async-trait = "0.1"
+
+# Streaming
+futures = "0.3"
+tokio-stream = "0.1"
+eventsource-stream = "0.2"
+
+# Retry logic
+backoff = { version = "0.4", features = ["tokio"] }
+
+# Core crate
+agent-core = { path = "../agent-core" }
+
+[dev-dependencies]
+tokio-test = "0.4"
+# wiremock = "0.5" # Temporarily disabled - will use manual mocks for now

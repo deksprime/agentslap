@@ -33,7 +33,26 @@ This is a Cargo workspace with multiple crates:
 ### Prerequisites
 
 - Rust 1.75+ (install from [rustup.rs](https://rustup.rs))
+- API keys for LLM providers (OpenAI and/or Anthropic)
 - cargo-watch (optional): `cargo install cargo-watch`
+
+### Setup Environment Variables
+
+```bash
+# Copy the example environment file
+cp .env.example .env
+
+# Edit .env with your API keys
+nano .env
+```
+
+Your `.env` file should contain:
+```bash
+OPENAI_API_KEY=sk-your-actual-key
+ANTHROPIC_API_KEY=sk-ant-your-actual-key
+```
+
+**Note**: The `.env` file is git-ignored and safe for local development. See `ENV_VARS.md` for production deployment options.
 
 ### Building
 
@@ -78,8 +97,8 @@ cargo fmt
 
 This project is being developed in phases:
 
-- ✅ **Phase 0**: Project foundation (current)
-- 🔄 **Phase 1**: LLM provider abstraction
+- ✅ **Phase 0**: Project foundation
+- ✅ **Phase 1**: LLM provider abstraction (current)
 - 🔄 **Phase 2**: Message & conversation management
 - 🔄 **Phase 3**: Session management
 - 🔄 **Phase 4**: Tool calling system
