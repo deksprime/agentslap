@@ -9,8 +9,37 @@ LLM Provider Abstraction for the Agent Runtime.
 - **Retry Logic**: Automatic retry with exponential backoff
 - **Error Handling**: Comprehensive error types with retry-ability detection
 - **Async**: Built on Tokio for high performance
+- **Conversation Management**: Multi-turn conversation tracking with context management
+- **Token Counting**: Approximate token estimation for context window management
+- **Builder Pattern**: Fluent API for constructing conversations
 
 ## Usage
+
+### Building Conversations
+
+```rust
+use agent_llm::Conversation;
+
+// Fluent builder pattern
+let conversation = Conversation::builder()
+    .system("You are a helpful coding assistant")
+    .user("How do I create a vector in Rust?")
+    .assistant("You can use Vec::new() or the vec! macro")
+    .user("Show me an example")
+    .build();
+
+// Manual construction
+let mut conv = Conversation::new();
+conv.add_system("You are helpful");
+conv.add_user("Hello!");
+conv.add_assistant("Hi there!");
+
+// Token estimation
+println!("Estimated tokens: {}", conv.estimate_tokens());
+
+// Truncate to fit context window
+conv.truncate_to_tokens(4000);
+```
 
 ### Basic Completion
 

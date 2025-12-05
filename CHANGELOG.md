@@ -7,10 +7,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 2 - Coming Soon
-- Message & Conversation Management
-- Multi-turn conversation handling
-- Token counting utilities
+### Phase 3 - Coming Soon
+- Session Management
+- In-memory, cache, and database storage
+- Session persistence and retrieval
+
+## [0.3.0] - 2025-12-01
+
+### Added - Phase 2: Message & Conversation Management
+
+#### Conversation Management (`agent-llm`)
+- `Conversation` struct for multi-turn interaction tracking
+- Unique conversation IDs with UUID v4
+- Timestamps for creation and updates
+- Flexible metadata support with JSON values
+
+#### Builder Pattern
+- `ConversationBuilder` for fluent conversation construction
+- Chainable methods for all message types
+- Clean, readable API design
+- Metadata configuration support
+
+#### Token Management
+- Approximate token counting (chars / 4 heuristic)
+- Per-message token estimation
+- Conversation-wide token counting
+- Foundation for accurate tokenization
+
+#### Context Window Management
+- Smart truncation to fit token limits
+- System message preservation
+- Sliding window strategy (keeps recent messages)
+- Configurable truncation limits
+
+#### Serialization
+- Full JSON serialization/deserialization
+- Conversation import/export capabilities
+- Preserves all state (messages, metadata, timestamps)
+- Compatible with serde ecosystem
+
+#### Utilities
+- Conversation summaries with statistics
+- Message accessors (first, last, system)
+- Collection operations (len, is_empty, clear)
+- Message iteration support
+
+#### Testing
+- 11 new unit tests (100% pass)
+- Cumulative: 49 tests across all phases
+- Conversation demo example
+- LLM integration example
+
+#### Dependencies
+- `chrono` 0.4 - DateTime handling
+- `uuid` 1.11 - Unique identifiers
+
+#### Examples
+- Conversation demo (offline)
+- Conversation with LLM integration
+- Multi-turn conversation examples
 
 ## [0.2.0] - 2025-12-01
 

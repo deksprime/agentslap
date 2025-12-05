@@ -26,6 +26,7 @@
 pub mod error;
 pub mod provider;
 pub mod types;
+pub mod conversation;
 
 // Provider implementations
 pub mod openai;
@@ -34,7 +35,8 @@ pub mod anthropic;
 // Re-exports
 pub use error::{LLMError, Result};
 pub use provider::LLMProvider;
-pub use types::{Message, MessageRole, Response, StreamChunk};
+pub use types::{Message, MessageRole, Response, StreamChunk, TokenUsage};
+pub use conversation::{Conversation, ConversationBuilder, ConversationSummary};
 
 pub use anthropic::AnthropicProvider;
 pub use openai::OpenAIProvider;

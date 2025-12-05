@@ -31,6 +31,10 @@ eventsource-stream = "0.2"
 # Retry logic
 backoff = { version = "0.4", features = ["tokio"] }
 
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
 # Core crate
 agent-core = { path = "../agent-core" }
 
