@@ -25,6 +25,7 @@ tracing = { workspace = true }
 
 # Streaming
 futures = "0.3"
+async-stream = "0.3"
 
 # Core crates (NO CIRCULAR DEPENDENCIES!)
 agent-core = { path = "../agent-core" }

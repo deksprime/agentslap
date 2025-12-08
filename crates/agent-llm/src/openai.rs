@@ -3,9 +3,10 @@
 use async_trait::async_trait;
 use backoff::{future::retry, ExponentialBackoff};
 use eventsource_stream::Eventsource;
-use futures::StreamExt;
+use futures::{Stream, StreamExt};
 use reqwest::{Client, StatusCode};
 use serde::{Deserialize, Serialize};
+use std::pin::Pin;
 use std::time::Duration;
 
 use crate::{
@@ -161,6 +162,60 @@ impl LLMProvider for OpenAIProvider {
         };
 
         self.make_request(&request).await
+    }
+
+    async fn stream_message_with_tools(
+        &self,
+        messages: Vec<Message>,
+        tools: Vec<serde_json::Value>,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<serde_json::Value>> + Send>>> {
+        let request = OpenAIRequest {
+            model: self.model.clone(),
+            messages: self.format_messages(&messages),
+            stream: true,  // Enable streaming
+            temperature: None,
+            max_tokens: None,
+            tools: Some(tools),
+            tool_choice: Some("auto".to_string()),
+        };
+
+        let response = self
+            .client
+            .post(format!("{}/chat/completions", OPENAI_API_BASE))
+            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header("Content-Type", "application/json")
+            .timeout(self.timeout)
+            .json(&request)
+            .send()
+            .await
+            .map_err(LLMError::HttpError)?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LLMError::api_error(format!("API error ({}): {}", status, error_text)));
+        }
+
+        let stream = response
+            .bytes_stream()
+            .eventsource()
+            .filter_map(|event| async move {
+                match event {
+                    Ok(event) => {
+                        if event.data == "[DONE]" {
+                            None
+                        } else {
+                            match serde_json::from_str::<serde_json::Value>(&event.data) {
+                                Ok(json) => Some(Ok(json)),
+                                Err(e) => Some(Err(LLMError::parse_error(e.to_string()))),
+                            }
+                        }
+                    }
+                    Err(e) => Some(Err(LLMError::stream_error(e.to_string()))),
+                }
+            });
+
+        Ok(Box::pin(stream))
     }
 
     async fn send_message(&self, messages: Vec<Message>) -> Result<Response> {

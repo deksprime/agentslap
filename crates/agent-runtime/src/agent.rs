@@ -3,9 +3,14 @@
 use agent_llm::{Conversation, LLMProvider};
 use agent_session::SessionStore;
 use agent_tools::{ToolRegistry, ToolResult};
+use futures::{Stream, StreamExt};
+use std::pin::Pin;
 use std::sync::Arc;
 
-use crate::{error::AgentRuntimeError, parser, Result};
+use crate::{error::AgentRuntimeError, parser, stream::AgentEvent, Result};
+
+/// Type alias for agent event stream
+pub type AgentEventStream = Pin<Box<dyn Stream<Item = Result<AgentEvent>> + Send>>;
 
 /// Configuration for agent behavior
 #[derive(Debug, Clone)]
@@ -51,17 +56,223 @@ impl Agent {
         AgentBuilder::new()
     }
 
+    /// Run the agent with streaming responses
+    ///
+    /// Returns a stream of AgentEvent that includes:
+    /// - Text chunks from LLM (as they arrive)
+    /// - Tool call notifications (when LLM requests tools)
+    /// - Tool results (after execution)
+    /// - Final completion notification
+    ///
+    /// Tools are executed and results are sent back to LLM automatically.
+    /// The stream continues until the LLM provides a final answer.
+    pub async fn run_stream(&self, user_message: &str) -> Result<AgentEventStream> {
+        let mut conversation = self.load_or_create_conversation().await?;
+        conversation.add_user(user_message);
+        
+        let provider = Arc::clone(&self.provider);
+        let tools = Arc::clone(&self.tools);
+        let session_store = Arc::clone(&self.session_store);
+        let config = self.config.clone();
+        
+        let stream = async_stream::stream! {
+            let mut iterations = 0;
+            let mut conv = conversation;
+
+            loop {
+                iterations += 1;
+
+                if iterations > config.max_iterations {
+                    yield Err(AgentRuntimeError::MaxIterationsExceeded(config.max_iterations));
+                    break;
+                }
+
+                // Get tools in provider format
+                let tools_json = match provider.name() {
+                    "openai" => tools.to_openai_functions(),
+                    "anthropic" => tools.to_anthropic_tools(),
+                    _ => vec![],
+                };
+
+                // Stream with tools
+                let mut llm_stream = provider
+                    .stream_message_with_tools(conv.messages().to_vec(), tools_json)
+                    .await
+                    .map_err(|e| AgentRuntimeError::from(e))?;
+
+                let mut full_content = String::new();
+                
+                // Track tool calls being built from streaming chunks
+                struct ToolCallBuilder {
+                    id: Option<String>,
+                    name: Option<String>,
+                    arguments: String,
+                }
+                let mut tool_call_builders: std::collections::HashMap<usize, ToolCallBuilder> = std::collections::HashMap::new();
+
+                // Process stream chunks
+                while let Some(chunk_result) = llm_stream.next().await {
+                    match chunk_result {
+                        Ok(chunk_json) => {
+                            // Extract content delta (text being streamed)
+                            let content_delta = match provider.name() {
+                                "openai" => {
+                                    chunk_json.get("choices")
+                                        .and_then(|v| v.get(0))
+                                        .and_then(|v| v.get("delta"))
+                                        .and_then(|v| v.get("content"))
+                                        .and_then(|v| v.as_str())
+                                        .unwrap_or("")
+                                }
+                                "anthropic" => {
+                                    if chunk_json.get("type").and_then(|v| v.as_str()) == Some("content_block_delta") {
+                                        chunk_json.get("delta")
+                                            .and_then(|v| v.get("text"))
+                                            .and_then(|v| v.as_str())
+                                            .unwrap_or("")
+                                    } else {
+                                        ""
+                                    }
+                                }
+                                _ => "",
+                            };
+
+                            if !content_delta.is_empty() {
+                                full_content.push_str(content_delta);
+                                yield Ok(AgentEvent::text(content_delta.to_string()));
+                            }
+
+                            // Accumulate tool calls (they come in chunks in streaming)
+                            if let Some(tool_calls_array) = chunk_json.get("choices")
+                                .and_then(|v| v.get(0))
+                                .and_then(|v| v.get("delta"))
+                                .and_then(|v| v.get("tool_calls"))
+                                .and_then(|v| v.as_array())
+                            {
+                                for tool_call_delta in tool_calls_array {
+                                    let index = tool_call_delta.get("index")
+                                        .and_then(|v| v.as_u64())
+                                        .unwrap_or(0) as usize;
+
+                                    let builder = tool_call_builders.entry(index).or_insert(ToolCallBuilder {
+                                        id: None,
+                                        name: None,
+                                        arguments: String::new(),
+                                    });
+
+                                    // Accumulate ID (comes in first chunk)
+                                    if let Some(id) = tool_call_delta.get("id").and_then(|v| v.as_str()) {
+                                        builder.id = Some(id.to_string());
+                                    }
+
+                                    // Accumulate function name
+                                    if let Some(name) = tool_call_delta.get("function")
+                                        .and_then(|v| v.get("name"))
+                                        .and_then(|v| v.as_str())
+                                    {
+                                        builder.name = Some(name.to_string());
+                                    }
+
+                                    // Accumulate arguments
+                                    if let Some(args) = tool_call_delta.get("function")
+                                        .and_then(|v| v.get("arguments"))
+                                        .and_then(|v| v.as_str())
+                                    {
+                                        builder.arguments.push_str(args);
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            yield Err(AgentRuntimeError::from(e));
+                            break;
+                        }
+                    }
+                }
+                
+                // Reconstruct complete tool calls from accumulated chunks
+                if !tool_call_builders.is_empty() {
+                    let mut tool_calls = Vec::new();
+                    
+                    for (_index, builder) in tool_call_builders {
+                        if let (Some(name), args_str) = (builder.name, builder.arguments) {
+                            // Parse the accumulated arguments string into JSON
+                            match serde_json::from_str::<serde_json::Value>(&args_str) {
+                                Ok(params) => {
+                                    tool_calls.push(parser::ToolCall::new(name, params, builder.id));
+                                }
+                                Err(e) => {
+                                    tracing::error!("Failed to parse tool arguments: {} - Raw: {}", e, args_str);
+                                }
+                            }
+                        }
+                    }
+                    
+                    if !tool_calls.is_empty() {
+                        yield Ok(AgentEvent::thinking(format!("Using {} tool(s)", tool_calls.len())));
+
+                        for tool_call in tool_calls {
+                            yield Ok(AgentEvent::tool_call_start(
+                                tool_call.name.clone(),
+                                tool_call.parameters.clone()
+                            ));
+
+                            let result = match execute_tool_helper(&tools, &tool_call).await {
+                                Ok(r) => r,
+                                Err(e) => {
+                                    yield Err(e);
+                                    continue;
+                                }
+                            };
+
+                            yield Ok(AgentEvent::tool_call_end(
+                                tool_call.name.clone(),
+                                result.success,
+                                result.data.clone(),
+                                result.error.clone(),
+                            ));
+
+                            let result_text = if result.success {
+                                format!("Tool '{}' returned: {}",
+                                    tool_call.name,
+                                    result.data.as_ref()
+                                        .map(|d| serde_json::to_string_pretty(d).unwrap_or_default())
+                                        .unwrap_or_default()
+                                )
+                            } else {
+                                format!("Tool '{}' failed: {}",
+                                    tool_call.name,
+                                    result.error.as_ref().unwrap_or(&"Unknown error".to_string())
+                                )
+                            };
+
+                            conv.add_user(&result_text);
+                        }
+
+                        // Continue loop - LLM will process tool results
+                        continue;
+                    }
+                }
+
+                // No tool calls - response is complete
+                if !full_content.is_empty() {
+                    conv.add_assistant(&full_content);
+                    let _ = save_conversation_helper(&session_store, &config, &conv).await;
+                }
+
+                yield Ok(AgentEvent::done(None));
+                break;
+            }
+        };
+
+        Ok(Box::pin(stream))
+    }
+
     /// Run the agent with a user message
     ///
     /// This is the main entry point for agent execution.
-    /// It will:
-    /// 1. Load or create conversation from session
-    /// 2. Add user message
-    /// 3. Call LLM with tools
-    /// 4. Parse and execute any tool calls
-    /// 5. Loop until final answer
-    /// 6. Save conversation to session
-    /// 7. Return final response
+    /// Returns the complete final response.
+    /// For streaming, use run_stream() instead.
     pub async fn run(&self, user_message: &str) -> Result<String> {
         // Load or create conversation
         let mut conversation = self.load_or_create_conversation().await?;
@@ -247,6 +458,29 @@ impl Agent {
             .await
             .map_err(|e| e.into())
     }
+}
+
+/// Helper function for tool execution in streams
+async fn execute_tool_helper(
+    tools: &ToolRegistry,
+    tool_call: &parser::ToolCall,
+) -> Result<ToolResult> {
+    tools
+        .execute(&tool_call.name, tool_call.parameters.clone())
+        .await
+        .map_err(|e| e.into())
+}
+
+/// Helper function for saving conversations in streams
+async fn save_conversation_helper(
+    store: &Arc<dyn SessionStore>,
+    config: &AgentConfig,
+    conversation: &Conversation,
+) -> Result<()> {
+    if let Some(session_id) = &config.session_id {
+        store.save(session_id, conversation.clone()).await?;
+    }
+    Ok(())
 }
 
 /// Builder for constructing an Agent

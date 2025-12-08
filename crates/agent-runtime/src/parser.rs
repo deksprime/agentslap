@@ -19,6 +19,17 @@ pub struct ToolCall {
     pub id: Option<String>,
 }
 
+impl ToolCall {
+    /// Create a new tool call
+    pub fn new(name: String, parameters: Value, id: Option<String>) -> Self {
+        Self {
+            name,
+            parameters,
+            id,
+        }
+    }
+}
+
 /// Parse OpenAI function calls from response
 ///
 /// OpenAI returns tool calls in this format:

@@ -2,6 +2,7 @@
 
 use async_trait::async_trait;
 use futures::Stream;
+use serde_json::Value;
 use std::pin::Pin;
 
 use crate::{Message, Response, Result, StreamChunk};
@@ -52,6 +53,23 @@ pub trait LLMProvider: Send + Sync {
         messages: Vec<Message>,
         tools: Vec<serde_json::Value>,
     ) -> Result<serde_json::Value>;
+
+    /// Stream a message with tools available
+    ///
+    /// Returns a stream that may contain text chunks AND tool call information.
+    /// The raw stream chunks include tool call data when present.
+    ///
+    /// # Arguments
+    /// * `messages` - Conversation history
+    /// * `tools` - Tools available to the LLM
+    ///
+    /// # Returns
+    /// Stream of raw JSON chunks from the API
+    async fn stream_message_with_tools(
+        &self,
+        messages: Vec<Message>,
+        tools: Vec<serde_json::Value>,
+    ) -> Result<Pin<Box<dyn Stream<Item = Result<serde_json::Value>> + Send>>>;
 
     /// Send a message and stream the response as it's generated
     ///
@@ -107,8 +125,8 @@ mod tests {
         async fn send_message_with_tools(
             &self,
             _messages: Vec<Message>,
-            _tools: Vec<serde_json::Value>,
-        ) -> Result<serde_json::Value> {
+            _tools: Vec<Value>,
+        ) -> Result<Value> {
             Ok(serde_json::json!({
                 "choices": [{
                     "message": {
@@ -116,6 +134,16 @@ mod tests {
                     }
                 }]
             }))
+        }
+
+        async fn stream_message_with_tools(
+            &self,
+            _messages: Vec<Message>,
+            _tools: Vec<Value>,
+        ) -> Result<Pin<Box<dyn Stream<Item = Result<Value>> + Send>>> {
+            use futures::stream;
+            let chunks = vec![Ok(serde_json::json!({"delta": {"content": "Mock"}}))];
+            Ok(Box::pin(stream::iter(chunks)))
         }
 
         async fn stream_message(&self, _messages: Vec<Message>) -> Result<ResponseStream> {
