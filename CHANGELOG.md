@@ -7,10 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 3 - Coming Soon
-- Session Management
-- In-memory, cache, and database storage
-- Session persistence and retrieval
+### Phase 4 - Coming Soon
+- Tool Calling System
+- Tool registry and execution
+- JSON schema generation
+
+## [0.4.0] - 2025-12-01
+
+### Added - Phase 3: Session Management
+
+#### SessionStore Trait (`agent-session`)
+- Async trait for storage abstraction
+- CRUD operations (save, load, delete, exists)
+- Session listing and metadata retrieval
+- Bulk clear operation
+- Support for multiple backend implementations
+
+#### InMemoryStore
+- Concurrent HashMap using DashMap (lock-free)
+- Thread-safe for multi-threaded access
+- O(1) lookups and inserts
+- Optional capacity limits
+- Process-lifetime persistence
+- 8 unit tests covering all operations
+
+#### CacheStore with TTL
+- Async cache using Moka
+- Time-To-Live expiration support
+- LRU eviction when at capacity
+- Automatic expiration handling
+- Write extends TTL (activity-based)
+- Background maintenance tasks
+- 8 unit tests including TTL verification
+
+#### LayeredStore
+- Combines multiple storage backends
+- Write-through to all layers
+- Read-through with automatic write-back
+- Graceful degradation on partial failures
+- Session deduplication across layers
+- Production-ready caching hierarchy
+- 7 unit tests for fallback scenarios
+
+#### Features
+- Thread-safe concurrent access
+- Automatic session expiration
+- Capacity management
+- Session metadata without full load
+- Bulk operations (clear, list)
+- Error handling with detailed types
+
+#### Testing
+- 27 new unit tests (100% pass)
+- Concurrent access tests
+- TTL expiration tests
+- Layered fallback tests
+- Total: 76 tests across all phases
+
+#### Examples
+- Basic storage demo (CRUD operations)
+- Layered storage demo (caching hierarchy)
+
+#### Dependencies
+- `dashmap` 6.1 - Lock-free concurrent HashMap
+- `moka` 0.12 - Async cache with TTL
+- `chrono` 0.4 - DateTime for metadata
 
 ## [0.3.0] - 2025-12-01
 

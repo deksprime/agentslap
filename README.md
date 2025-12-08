@@ -98,9 +98,9 @@ cargo fmt
 This project is being developed in phases:
 
 - ✅ **Phase 0**: Project foundation
-- ✅ **Phase 1**: LLM provider abstraction (current)
-- 🔄 **Phase 2**: Message & conversation management
-- 🔄 **Phase 3**: Session management
+- ✅ **Phase 1**: LLM provider abstraction  
+- ✅ **Phase 2**: Message & conversation management
+- ✅ **Phase 3**: Session management (current)
 - 🔄 **Phase 4**: Tool calling system
 - 🔄 **Phase 5**: Agent core loop
 
