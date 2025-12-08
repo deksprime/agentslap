@@ -159,6 +159,43 @@ impl AnthropicProvider {
 
 #[async_trait]
 impl LLMProvider for AnthropicProvider {
+    async fn send_message_with_tools(
+        &self,
+        messages: Vec<Message>,
+        tools: Vec<serde_json::Value>,
+    ) -> Result<serde_json::Value> {
+        let (system, formatted_messages) = self.format_messages(&messages);
+
+        let request = serde_json::json!({
+            "model": self.model,
+            "messages": formatted_messages,
+            "system": system,
+            "max_tokens": 4096,
+            "tools": tools,
+        });
+
+        // Make raw request and return JSON
+        let response = self
+            .client
+            .post(format!("{}/messages", ANTHROPIC_API_BASE))
+            .header("x-api-key", &self.api_key)
+            .header("anthropic-version", ANTHROPIC_VERSION)
+            .header("Content-Type", "application/json")
+            .timeout(self.timeout)
+            .json(&request)
+            .send()
+            .await
+            .map_err(LLMError::HttpError)?;
+
+        let status = response.status();
+        if !status.is_success() {
+            let error_text = response.text().await.unwrap_or_default();
+            return Err(LLMError::api_error(format!("API error ({}): {}", status, error_text)));
+        }
+
+        response.json().await.map_err(|e| LLMError::parse_error(e.to_string()))
+    }
+
     async fn send_message(&self, messages: Vec<Message>) -> Result<Response> {
         let (system, formatted_messages) = self.format_messages(&messages);
 

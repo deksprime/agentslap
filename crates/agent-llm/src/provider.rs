@@ -36,6 +36,23 @@ pub trait LLMProvider: Send + Sync {
     /// ```
     async fn send_message(&self, messages: Vec<Message>) -> Result<Response>;
 
+    /// Send a message with tools and get raw JSON response
+    ///
+    /// This is used for tool calling - returns the raw API response
+    /// which may contain tool calls.
+    ///
+    /// # Arguments
+    /// * `messages` - Conversation history
+    /// * `tools` - Tools available to the LLM
+    ///
+    /// # Returns
+    /// Raw JSON response from the API
+    async fn send_message_with_tools(
+        &self,
+        messages: Vec<Message>,
+        tools: Vec<serde_json::Value>,
+    ) -> Result<serde_json::Value>;
+
     /// Send a message and stream the response as it's generated
     ///
     /// # Arguments
@@ -85,6 +102,20 @@ mod tests {
                 usage: None,
                 finish_reason: Some("stop".to_string()),
             })
+        }
+
+        async fn send_message_with_tools(
+            &self,
+            _messages: Vec<Message>,
+            _tools: Vec<serde_json::Value>,
+        ) -> Result<serde_json::Value> {
+            Ok(serde_json::json!({
+                "choices": [{
+                    "message": {
+                        "content": "Mock response with tools"
+                    }
+                }]
+            }))
         }
 
         async fn stream_message(&self, _messages: Vec<Message>) -> Result<ResponseStream> {

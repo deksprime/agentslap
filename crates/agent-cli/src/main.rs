@@ -20,8 +20,12 @@ fn main() {
 
     println!("🤖 Agent Runtime v{}", env!("CARGO_PKG_VERSION"));
     println!("Agent: {}", config.agent.name);
-    println!("\nPhase 0 complete! Ready for Phase 1.");
-    println!("\nNext steps:");
-    println!("  - Phase 1: LLM Provider Abstraction");
-    println!("  - See PHASE0_CHECKLIST.md for details");
+    println!("  ✓ Foundation (error handling, logging, config)");
+    println!("  ✓ LLM Providers (OpenAI, Anthropic)");
+    println!("  ✓ Conversations (multi-turn, token management)");
+    println!("  ✓ Sessions (memory, cache, layered storage)");
+    println!("  ✓ Tools (calculator, echo, current_time)");
+    println!("  ✓ Agent Runtime (complete agent loop)");
+    println!("\n Run examples:");
+    println!("  cargo run -p agent-runtime --example basic_agent");
 }

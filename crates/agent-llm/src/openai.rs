@@ -145,6 +145,24 @@ impl OpenAIProvider {
 
 #[async_trait]
 impl LLMProvider for OpenAIProvider {
+    async fn send_message_with_tools(
+        &self,
+        messages: Vec<Message>,
+        tools: Vec<serde_json::Value>,
+    ) -> Result<serde_json::Value> {
+        let request = OpenAIRequest {
+            model: self.model.clone(),
+            messages: self.format_messages(&messages),
+            stream: false,
+            temperature: None,
+            max_tokens: None,
+            tools: Some(tools),
+            tool_choice: Some("auto".to_string()),
+        };
+
+        self.make_request(&request).await
+    }
+
     async fn send_message(&self, messages: Vec<Message>) -> Result<Response> {
         let request = OpenAIRequest {
             model: self.model.clone(),
@@ -152,6 +170,8 @@ impl LLMProvider for OpenAIProvider {
             stream: false,
             temperature: None,
             max_tokens: None,
+            tools: None,
+            tool_choice: None,
         };
 
         let response: OpenAIResponse = self.make_request(&request).await?;
@@ -162,7 +182,7 @@ impl LLMProvider for OpenAIProvider {
             .ok_or_else(|| LLMError::parse_error("No choices in response"))?;
 
         Ok(Response {
-            content: choice.message.content.clone(),
+            content: choice.message.content.clone().unwrap_or_default(),
             model: response.model,
             usage: response.usage.map(|u| TokenUsage {
                 prompt_tokens: u.prompt_tokens,
@@ -180,6 +200,8 @@ impl LLMProvider for OpenAIProvider {
             stream: true,
             temperature: None,
             max_tokens: None,
+            tools: None,
+            tool_choice: None,
         };
 
         let response = self
@@ -256,6 +278,10 @@ struct OpenAIRequest {
     temperature: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     max_tokens: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tools: Option<Vec<serde_json::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    tool_choice: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -273,8 +299,16 @@ struct OpenAIResponse {
 
 #[derive(Debug, Deserialize)]
 struct OpenAIChoice {
-    message: OpenAIMessage,
+    message: OpenAIResponseMessage,
     finish_reason: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct OpenAIResponseMessage {
+    #[serde(default)]
+    content: Option<String>,
+    #[serde(default)]
+    tool_calls: Option<Vec<serde_json::Value>>,
 }
 
 #[derive(Debug, Deserialize)]

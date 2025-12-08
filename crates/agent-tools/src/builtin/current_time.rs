@@ -20,9 +20,10 @@ impl Tool for CurrentTimeTool {
     }
 
     fn parameters_schema(&self) -> ToolSchema {
-        // No parameters needed
+        // No parameters needed, but OpenAI requires properties field
         ToolSchema::new()
             .with_description("No parameters required")
+            .with_properties(serde_json::json!({})) // ← Empty object required by OpenAI!
     }
 
     async fn execute(&self, _params: Value) -> Result<ToolResult> {

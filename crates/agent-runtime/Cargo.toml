@@ -1,0 +1,37 @@
+[package]
+name = "agent-runtime"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Async trait support
+async-trait = "0.1"
+
+# Logging
+tracing = { workspace = true }
+
+# Streaming
+futures = "0.3"
+
+# Core crates (NO CIRCULAR DEPENDENCIES!)
+agent-core = { path = "../agent-core" }
+agent-llm = { path = "../agent-llm" }
+agent-session = { path = "../agent-session" }
+agent-tools = { path = "../agent-tools" }
+
+[dev-dependencies]
+tokio-test = "0.4"
+

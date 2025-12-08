@@ -11,4 +11,11 @@ path = "src/main.rs"
 
 [dependencies]
 agent-core = { path = "../agent-core" }
+agent-runtime = { path = "../agent-runtime" }
+agent-llm = { path = "../agent-llm" }
+agent-session = { path = "../agent-session" }
+agent-tools = { path = "../agent-tools" }
+
+tokio = { workspace = true }
+anyhow = { workspace = true }
 

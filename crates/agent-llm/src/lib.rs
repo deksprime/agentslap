@@ -27,6 +27,7 @@ pub mod error;
 pub mod provider;
 pub mod types;
 pub mod conversation;
+pub mod helpers;
 
 // Provider implementations
 pub mod openai;

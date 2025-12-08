@@ -17,16 +17,20 @@ A portable, production-ready agent runtime built in Rust with support for multip
 
 This is a Cargo workspace with multiple crates:
 
-- `agent-core`: Core agent logic and orchestration
-- `agent-llm`: LLM provider abstractions
-- `agent-session`: Session management
-- `agent-tools`: Tool system
+**Implemented (Phases 0-5)**:
+- `agent-core`: Core foundation (error handling, logging, config)
+- `agent-llm`: LLM providers (OpenAI, Anthropic) + conversations
+- `agent-session`: Session management (memory, cache, layered storage)
+- `agent-tools`: Tool system (registry, built-in tools)
+- `agent-runtime`: **Agent struct** - ties everything together
+- `agent-cli`: Command-line interface
+
+**Future (Phases 6+)**:
 - `agent-guardrails`: Safety systems
 - `agent-hitl`: Human-in-the-loop
 - `agent-context`: Context management
 - `agent-mcp`: MCP implementation
 - `agent-comms`: Communication layer
-- `agent-cli`: Command-line interface
 
 ## Getting Started
 
@@ -100,11 +104,14 @@ This project is being developed in phases:
 - ✅ **Phase 0**: Project foundation
 - ✅ **Phase 1**: LLM provider abstraction  
 - ✅ **Phase 2**: Message & conversation management
-- ✅ **Phase 3**: Session management (current)
-- 🔄 **Phase 4**: Tool calling system
-- 🔄 **Phase 5**: Agent core loop
+- ✅ **Phase 3**: Session management
+- ✅ **Phase 4**: Tool calling system
+- ✅ **Phase 5**: Agent runtime (current)
+- 🔄 **Phase 6**: Database storage (SQLite)
 
 See [implementation_plan.md](../implementation_plan.md) for full roadmap.
+
+**Milestone**: Phases 0-5 complete! You have a working agent runtime!
 
 ## License
 

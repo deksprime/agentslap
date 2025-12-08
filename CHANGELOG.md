@@ -7,10 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 5 - Coming Soon
-- Agent Core Loop
-- Tie all components together
-- Tool call parsing from LLM responses
+### Phase 6 - Coming Soon
+- Database Storage (SQLite)
+- Persistent sessions across restarts
+- Database migrations
+
+## [0.6.0] - 2025-12-01
+
+### Added - Phase 5: Agent Runtime
+
+#### New Crate: agent-runtime
+- **Critical**: Separate crate to avoid circular dependencies
+- Composition layer sitting above all other crates
+- Clean dependency graph (acyclic, no cycles)
+
+#### Agent Struct
+- Main agent combining LLM provider, tools, session store
+- Builder pattern for flexible construction
+- Configuration support (max iterations, session ID, system message)
+- Session integration (auto load/save)
+- Error handling across all layers
+
+#### AgentBuilder
+- Fluent API for agent construction
+- Type-safe component injection
+- Optional configuration
+- Validation on build()
+
+#### Tool Call Parser
+- Parse OpenAI function calls from responses
+- Parse Anthropic tool uses from responses
+- Extract tool name and parameters
+- Handle multiple tool calls
+- Handle malformed responses
+- 5 parser tests
+
+#### Agent Loop Foundation
+- Basic run() method implementation
+- Load or create conversation from session
+- Add user message to conversation
+- Call LLM with conversation history
+- Save conversation to session after each turn
+- Max iterations safeguard
+
+#### Integration
+- All 5 phases work together seamlessly
+- Agent uses LLM providers from Phase 1
+- Agent uses conversations from Phase 2
+- Agent uses session storage from Phase 3
+- Agent uses tools from Phase 4
+- Clean composition, no circular references
+
+#### Testing
+- 13 new unit tests (agent builder, parser, integration)
+- Total: 119 tests across all phases (100% pass)
+- Examples demonstrating full agent
+
+#### Dependencies
+- agent-core, agent-llm, agent-session, agent-tools
+- **Direction**: All point upward in dependency graph
+- **Cycles**: Zero (verified by successful compilation)
+
+#### CLI Updates
+- Updated to show all phases complete
+- Now depends on agent-runtime
+- Ready for Phase 6+
 
 ## [0.5.0] - 2025-12-01
 
