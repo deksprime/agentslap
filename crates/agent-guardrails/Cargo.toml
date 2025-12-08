@@ -6,5 +6,34 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-# To be added in Phase 7
+# Async runtime
+tokio = { workspace = true }
 
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Async trait support
+async-trait = "0.1"
+
+# Logging
+tracing = { workspace = true }
+
+# Regex for content filtering
+regex = "1.11"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# Concurrent data structures
+dashmap = { workspace = true }
+
+# Core crates
+agent-core = { path = "../agent-core" }
+
+[dev-dependencies]
+tokio-test = "0.4"
