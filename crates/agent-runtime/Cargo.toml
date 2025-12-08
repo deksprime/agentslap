@@ -1,5 +1,5 @@
 [package]
-name = "agent-tools"
+name = "agent-runtime"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -20,18 +20,19 @@ anyhow = { workspace = true }
 # Async trait support
 async-trait = "0.1"
 
-# JSON Schema generation
-schemars = "0.8"
-
 # Logging
 tracing = { workspace = true }
 
-# Utilities
-chrono = { version = "0.4", features = ["serde"] }
-dashmap = { workspace = true }
+# Streaming
+futures = "0.3"
+async-stream = "0.3"
 
-# Core crates
+# Core crates (NO CIRCULAR DEPENDENCIES!)
 agent-core = { path = "../agent-core" }
+agent-llm = { path = "../agent-llm" }
+agent-session = { path = "../agent-session" }
+agent-tools = { path = "../agent-tools" }
 
 [dev-dependencies]
 tokio-test = "0.4"
+
