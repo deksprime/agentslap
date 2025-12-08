@@ -6,5 +6,32 @@ authors.workspace = true
 license.workspace = true
 
 [dependencies]
-# To be added in Phase 4
+# Async runtime
+tokio = { workspace = true }
 
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Async trait support
+async-trait = "0.1"
+
+# JSON Schema generation
+schemars = "0.8"
+
+# Logging
+tracing = { workspace = true }
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = { workspace = true }
+
+# Core crates
+agent-core = { path = "../agent-core" }
+
+[dev-dependencies]
+tokio-test = "0.4"

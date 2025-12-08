@@ -7,10 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Phase 4 - Coming Soon
-- Tool Calling System
-- Tool registry and execution
-- JSON schema generation
+### Phase 5 - Coming Soon
+- Agent Core Loop
+- Tie all components together
+- Tool call parsing from LLM responses
+
+## [0.5.0] - 2025-12-01
+
+### Added - Phase 4: Tool Calling System
+
+#### Tool System (`agent-tools`)
+- `Tool` trait for extensible tool definition
+- Async tool execution support
+- ToolResult type for structured results
+- JSON schema generation for parameters
+- Thread-safe tool registry using DashMap
+
+#### Tool Registry
+- `ToolRegistry` for managing tools
+- Thread-safe registration and lookup
+- Tool execution with error handling
+- OpenAI function calling format generation
+- Anthropic tool use format generation
+- List and count operations
+- Duplicate detection
+
+#### JSON Schema Support
+- `ToolSchema` for parameter definitions
+- Property helpers (string, number, boolean, enum)
+- Required fields support
+- Multi-provider format conversion
+
+#### Built-in Tools
+- **CalculatorTool**: Arithmetic operations (add, subtract, multiply, divide)
+  - Parameter validation
+  - Division by zero handling
+  - Error results for invalid operations
+- **EchoTool**: Text echo for testing
+- **CurrentTimeTool**: Returns current date/time in multiple formats
+
+#### Features
+- Async tool execution
+- Type-safe parameter handling
+- Error boundaries (tool failures don't crash agent)
+- Extensible tool system (easy to add custom tools)
+- Multi-format schema generation
+
+#### Testing
+- 30 new unit tests (100% pass)
+- Tool execution tests
+- Schema generation tests
+- Error handling tests
+- Total: 106 tests across all phases
+
+#### Examples
+- Tool demo (registration, execution, schemas)
+
+#### Dependencies
+- `schemars` 0.8 - JSON Schema generation
+- `dashmap` 6.1 - Tool registry (reused)
+- `chrono` 0.4 - DateTime (reused)
 
 ## [0.4.0] - 2025-12-01
 
