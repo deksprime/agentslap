@@ -33,7 +33,7 @@ pub mod builtin;
 
 // Re-exports
 pub use error::{ToolError, Result};
-pub use tool::{Tool, ToolResult};
+pub use tool::{Tool, ToolResult, ToolRiskLevel};
 pub use registry::ToolRegistry;
 pub use schema::ToolSchema;
 
