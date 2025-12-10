@@ -33,6 +33,11 @@ agent-llm = { path = "../agent-llm" }
 agent-session = { path = "../agent-session" }
 agent-tools = { path = "../agent-tools" }
 agent-hitl = { path = "../agent-hitl" }
+agent-comms = { path = "../agent-comms" }
+
+# Additional dependencies
+uuid = { version = "1.11", features = ["v4", "serde"] }
+dashmap = { workspace = true }
 
 [dev-dependencies]
 tokio-test = "0.4"
