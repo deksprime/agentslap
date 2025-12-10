@@ -11,6 +11,7 @@ members = [
     "crates/agent-context",
     "crates/agent-mcp",
     "crates/agent-comms",
+    "crates/agent-telemetry",
     "crates/agent-cli",
 ]
 

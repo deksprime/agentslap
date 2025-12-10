@@ -1,5 +1,5 @@
 [package]
-name = "agent-comms"
+name = "agent-telemetry"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -17,33 +17,18 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
-# Async trait support
-async-trait = "0.1"
-
 # Logging
 tracing = { workspace = true }
 
 # Time handling
 chrono = { version = "0.4", features = ["serde"] }
 
-# UUID for message IDs
+# UUID for event IDs
 uuid = { version = "1.11", features = ["v4", "serde"] }
 
-# Concurrent data structures
-dashmap = { workspace = true }
-
-# Futures
-futures = "0.3"
-
-# HTTP client (optional, for HttpTransport)
-reqwest = { workspace = true, optional = true }
-
-# Core crates
+# Core crate
 agent-core = { path = "../agent-core" }
-
-[features]
-default = []
-http = ["dep:reqwest"]
 
 [dev-dependencies]
 tokio-test = "0.4"
+

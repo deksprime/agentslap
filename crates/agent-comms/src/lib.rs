@@ -31,6 +31,10 @@ pub mod coordinator;
 // In-process transport
 pub mod in_process;
 
+// HTTP transport (optional feature)
+#[cfg(feature = "http")]
+pub mod http_transport;
+
 // Re-exports
 pub use error::{CommsError, Result};
 pub use address::{AgentAddress, AgentLocation};
@@ -41,6 +45,9 @@ pub use context::AgentContext;
 pub use coordinator::AgentCoordinator;
 
 pub use in_process::InProcessTransport;
+
+#[cfg(feature = "http")]
+pub use http_transport::HttpTransport;
 
 #[cfg(test)]
 mod tests {
