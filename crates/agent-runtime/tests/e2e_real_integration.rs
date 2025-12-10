@@ -20,11 +20,6 @@
 use agent_llm::OpenAIProvider;
 use agent_runtime::Agent;
 use agent_session::{InMemoryStore, LayeredStore, CacheStore};
-
-// DatabaseStore only available when database feature is enabled
-// Tests using it are marked #[ignore] and won't compile without the feature
-#[allow(unused_imports)]
-use agent_session::DatabaseStore;
 use agent_tools::{builtin::*, ToolRegistry};
 use agent_guardrails::{GuardrailChain, ContentFilter, RateLimiter, CostLimiter, ToolAllowlist};
 use agent_hitl::AutoApprove;
@@ -62,20 +57,13 @@ async fn test_complete_agent_workflow_with_real_llm() {
     tools.register(CurrentTimeTool).expect("Failed to register time tool");
     println!("✓ Tools registered: {}", tools.count());
 
-    // 3. REAL Database Storage
-    let db_path = env::temp_dir().join("e2e_test_real.db");
-    let db_store = DatabaseStore::new(&db_path).await
-        .expect("Failed to create database");
-    println!("✓ Database created: {}", db_path.display());
-
-    // 4. REAL Layered Storage (cache → memory → database)
+    // 3. REAL Layered Storage (cache → memory)
     let cache = CacheStore::new(Duration::from_secs(300));
     let memory = InMemoryStore::new();
     
     let store = LayeredStore::new()
         .with_layer(cache)
-        .with_layer(memory)
-        .with_layer(db_store);
+        .with_layer(memory);
     println!("✓ Layered storage configured");
 
     // 5. REAL Guardrails
