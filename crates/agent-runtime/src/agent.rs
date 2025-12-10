@@ -2,7 +2,8 @@
 
 use agent_llm::{Conversation, LLMProvider};
 use agent_session::SessionStore;
-use agent_tools::{ToolRegistry, ToolResult};
+use agent_tools::{ToolRegistry, ToolResult, ToolRiskLevel};
+use agent_hitl::{ApprovalStrategy, ApprovalRequest, ApprovalResponse};
 use futures::{Stream, StreamExt};
 use std::pin::Pin;
 use std::sync::Arc;
@@ -23,6 +24,9 @@ pub struct AgentConfig {
     
     /// System message for the agent
     pub system_message: Option<String>,
+    
+    /// Risk levels that require approval (if HITL is enabled)
+    pub approval_required_for: Vec<ToolRiskLevel>,
 }
 
 impl Default for AgentConfig {
@@ -31,6 +35,7 @@ impl Default for AgentConfig {
             max_iterations: 10,
             session_id: None,
             system_message: Some("You are a helpful AI assistant.".to_string()),
+            approval_required_for: vec![ToolRiskLevel::High, ToolRiskLevel::Critical],
         }
     }
 }
@@ -48,6 +53,9 @@ pub struct Agent {
     
     /// Agent configuration
     config: AgentConfig,
+    
+    /// Human-in-the-loop approval strategy (optional)
+    hitl: Option<Arc<dyn ApprovalStrategy>>,
 }
 
 impl Agent {
@@ -449,8 +457,68 @@ impl Agent {
         Ok(())
     }
 
-    /// Execute a tool call
+    /// Execute a tool call with HITL approval check
     async fn execute_tool_call(&self, tool_call: &parser::ToolCall) -> Result<ToolResult> {
+        // Get tool to check risk level
+        let tool = self.tools.get_tool(&tool_call.name)
+            .ok_or_else(|| AgentRuntimeError::Tool(
+                agent_tools::ToolError::not_found(&tool_call.name)
+            ))?;
+
+        let risk = tool.risk_level();
+        
+        // Check if approval is needed
+        if self.config.approval_required_for.contains(&risk) {
+            if let Some(ref hitl) = self.hitl {
+                tracing::info!("Tool '{}' requires approval (risk: {:?})", tool_call.name, risk);
+
+                let approval_request = ApprovalRequest::new(
+                    format!("Execute tool: {}", tool_call.name),
+                    match risk {
+                        ToolRiskLevel::Low => agent_hitl::RiskLevel::Low,
+                        ToolRiskLevel::Medium => agent_hitl::RiskLevel::Medium,
+                        ToolRiskLevel::High => agent_hitl::RiskLevel::High,
+                        ToolRiskLevel::Critical => agent_hitl::RiskLevel::Critical,
+                    }
+                )
+                .with_context(tool_call.parameters.clone())
+                .with_timeout(std::time::Duration::from_secs(30));
+
+                let response = hitl.request_approval(approval_request).await
+                    .map_err(|e| AgentRuntimeError::config(format!("HITL error: {}", e)))?;
+
+                match response {
+                    ApprovalResponse::Approved => {
+                        tracing::info!("Tool '{}' approved by human", tool_call.name);
+                    }
+                    ApprovalResponse::Denied { reason } => {
+                        return Ok(ToolResult::error(
+                            format!("Tool execution denied by human: {}", 
+                                reason.unwrap_or_else(|| "No reason given".to_string()))
+                        ));
+                    }
+                    ApprovalResponse::Modified { modified_context } => {
+                        tracing::info!("Tool '{}' parameters modified by human", tool_call.name);
+                        // Use modified parameters
+                        return self.tools
+                            .execute(&tool_call.name, modified_context)
+                            .await
+                            .map_err(|e| e.into());
+                    }
+                    ApprovalResponse::Timeout => {
+                        return Ok(ToolResult::error("Approval request timed out"));
+                    }
+                }
+            } else {
+                tracing::warn!("Tool '{}' requires approval but no HITL strategy configured - auto-denying", 
+                    tool_call.name);
+                return Ok(ToolResult::error(
+                    format!("Tool '{}' requires human approval but HITL not configured", tool_call.name)
+                ));
+            }
+        }
+
+        // Execute tool (either approved or didn't need approval)
         tracing::info!("Executing tool: {} with params: {}", tool_call.name, tool_call.parameters);
 
         self.tools
@@ -488,6 +556,7 @@ pub struct AgentBuilder {
     provider: Option<Arc<dyn LLMProvider>>,
     tools: Option<Arc<ToolRegistry>>,
     session_store: Option<Arc<dyn SessionStore>>,
+    hitl: Option<Arc<dyn ApprovalStrategy>>,
     config: AgentConfig,
 }
 
@@ -498,6 +567,7 @@ impl AgentBuilder {
             provider: None,
             tools: None,
             session_store: None,
+            hitl: None,
             config: AgentConfig::default(),
         }
     }
@@ -517,6 +587,12 @@ impl AgentBuilder {
     /// Set the session store
     pub fn session_store<S: SessionStore + 'static>(mut self, store: S) -> Self {
         self.session_store = Some(Arc::new(store));
+        self
+    }
+
+    /// Set the HITL approval strategy (optional)
+    pub fn hitl<H: ApprovalStrategy + 'static>(mut self, hitl: H) -> Self {
+        self.hitl = Some(Arc::new(hitl));
         self
     }
 
@@ -561,6 +637,7 @@ impl AgentBuilder {
             tools,
             session_store,
             config: self.config,
+            hitl: self.hitl,
         })
     }
 }

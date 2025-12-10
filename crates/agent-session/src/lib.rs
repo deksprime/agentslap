@@ -34,12 +34,19 @@ pub mod memory;
 pub mod cache;
 pub mod layered;
 
+// Database support (optional feature)
+#[cfg(feature = "database")]
+pub mod database;
+
 // Re-exports
 pub use error::{SessionError, Result};
 pub use store::SessionStore;
 pub use memory::InMemoryStore;
 pub use cache::CacheStore;
 pub use layered::LayeredStore;
+
+#[cfg(feature = "database")]
+pub use database::{DatabaseStore, DatabaseStats};
 
 #[cfg(test)]
 mod tests {

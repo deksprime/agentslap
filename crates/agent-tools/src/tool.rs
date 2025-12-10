@@ -6,6 +6,20 @@ use serde_json::Value;
 
 use crate::{Result, ToolSchema};
 
+/// Risk level for a tool
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ToolRiskLevel {
+    /// Low risk - safe operations (calculator, echo, read-only)
+    Low,
+    /// Medium risk - operations with side effects (write file, API calls)
+    Medium,
+    /// High risk - potentially dangerous operations (delete, send email)
+    High,
+    /// Critical risk - system-level operations (execute code, shell commands)
+    Critical,
+}
+
 /// Result of a tool execution
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolResult {
@@ -71,6 +85,20 @@ pub trait Tool: Send + Sync {
     ///
     /// Returns a ToolSchema describing the expected parameters.
     fn parameters_schema(&self) -> ToolSchema;
+
+    /// Get the risk level of this tool
+    ///
+    /// This determines if human approval is required before execution.
+    /// Default is Low (safe, no approval needed).
+    ///
+    /// Override this for dangerous tools:
+    /// - Low: Safe operations (calculator, echo, read-only)
+    /// - Medium: Operations with side effects (write file, API calls)  
+    /// - High: Potentially dangerous (delete, send email, network access)
+    /// - Critical: System-level operations (execute code, shell commands)
+    fn risk_level(&self) -> ToolRiskLevel {
+        ToolRiskLevel::Low  // Default: safe
+    }
 
     /// Execute the tool with given parameters
     ///

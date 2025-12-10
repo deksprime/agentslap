@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 
+[features]
+default = []
+database = ["dep:sqlx"]
+
 [dependencies]
 # Async runtime
 tokio = { workspace = true }
@@ -32,9 +36,13 @@ tracing = { workspace = true }
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
 
+# Database (optional feature)
+sqlx = { workspace = true, optional = true }
+
 # Core crates
 agent-core = { path = "../agent-core" }
 agent-llm = { path = "../agent-llm" }
 
 [dev-dependencies]
 tokio-test = "0.4"
+uuid = { version = "1.11", features = ["v4"] }

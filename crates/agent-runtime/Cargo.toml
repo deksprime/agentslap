@@ -32,7 +32,11 @@ agent-core = { path = "../agent-core" }
 agent-llm = { path = "../agent-llm" }
 agent-session = { path = "../agent-session" }
 agent-tools = { path = "../agent-tools" }
+agent-hitl = { path = "../agent-hitl" }
 
 [dev-dependencies]
 tokio-test = "0.4"
+agent-guardrails = { path = "../agent-guardrails" }
+agent-comms = { path = "../agent-comms" }
+futures = "0.3"
 
