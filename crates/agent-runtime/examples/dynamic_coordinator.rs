@@ -26,10 +26,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         json: false,
     });
 
-    println!("🎯 Dynamic Multi-Agent Coordinator Demo\n");
+    println!("Agent Runtime - Dynamic Multi-Agent Coordinator\n");
 
     let api_key = env::var("OPENAI_API_KEY")
-        .unwrap_or_else(|_| "demo-key-not-for-real-calls".to_string());
+        .unwrap_or_else(|_| "demo-key-not-for-api-calls".to_string());
 
     // Create transport and factory
     let transport = Arc::new(InProcessTransport::new());
@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
 
     // Register role templates
-    println!("=== Registering Agent Roles ===");
+    println!("[SETUP] Registering agent roles");
     
     factory.register_role(RoleConfig {
         role: "coordinator".to_string(),
@@ -62,36 +62,36 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         max_iterations: 5,
     });
 
-    println!("✓ Registered 2 roles\n");
+    println!("[OK] Registered 2 roles\n");
 
     // Spawn coordinator
-    println!("=== Spawning Agents ===");
+    println!("[SPAWN] Creating agent instances");
     let coord_id = factory.spawn_agent("coordinator", Some("coordinator".to_string()))?;
-    println!("✓ Spawned coordinator: {}", coord_id);
+    println!("[OK] Coordinator: {}", coord_id);
 
     // Spawn 3 specialists
     for i in 1..=3 {
         let spec_id = factory.spawn_agent("math_specialist", Some(format!("math-spec-{}", i)))?;
-        println!("✓ Spawned specialist: {}", spec_id);
+        println!("[OK] Specialist: {}", spec_id);
     }
 
-    println!("\n=== Team Status ===");
-    println!("Total agents: {}", factory.agent_count());
-    println!("Coordinators: {}", factory.get_agents_by_role("coordinator").len());
-    println!("Math specialists: {}", factory.get_agents_by_role("math_specialist").len());
+    println!("\n[STATUS] Agent team configuration");
+    println!("  Total agents: {}", factory.agent_count());
+    println!("  Coordinators: {}", factory.get_agents_by_role("coordinator").len());
+    println!("  Math specialists: {}", factory.get_agents_by_role("math_specialist").len());
 
-    println!("\n=== Agent List ===");
+    println!("\n[REGISTRY] Active agents:");
     for agent_id in factory.list_agents() {
-        println!("  • {}", agent_id);
+        println!("  - {}", agent_id);
     }
 
-    println!("\n✅ Dynamic Multi-Agent System Created!");
-    println!("\n💡 What we proved:");
-    println!("  ✓ Factory can spawn agents dynamically");
-    println!("  ✓ Multiple roles supported");
-    println!("  ✓ Agents registered in system");
-    println!("  ✓ Registry tracks all agents");
-    println!("  ✓ Foundation for LLM-driven orchestration ready!");
+    println!("\n[COMPLETE] Dynamic multi-agent system initialized");
+    println!("\nCapabilities verified:");
+    println!("  - Dynamic agent spawning operational");
+    println!("  - Role-based agent templates functional");
+    println!("  - Agent registry tracking active");
+    println!("  - Multi-role support confirmed");
+    println!("  - Foundation for LLM-driven orchestration ready");
 
     Ok(())
 }
