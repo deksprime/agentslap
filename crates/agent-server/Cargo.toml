@@ -1,0 +1,51 @@
+[package]
+name = "agent-server"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "agent-server"
+path = "src/main.rs"
+
+[dependencies]
+# Web framework
+axum = "0.7"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Server-Sent Events
+axum-streams = { version = "0.18", features = ["json"] }
+futures = "0.3"
+async-stream = "0.3"
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Agent crates
+agent-coordination = { path = "../agent-coordination" }
+agent-runtime = { path = "../agent-runtime" }
+agent-comms = { path = "../agent-comms" }
+agent-llm = { path = "../agent-llm" }
+agent-session = { path = "../agent-session" }
+agent-hitl = { path = "../agent-hitl" }
+agent-tools = { path = "../agent-tools" }
+agent-core = { path = "../agent-core" }
+
+# Utilities
+uuid = { version = "1.11", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+dashmap = { workspace = true }
