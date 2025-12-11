@@ -1,34 +1,21 @@
-//! Interactive TUI for Agent Coordination
-//!
-//! A terminal user interface for chatting with a coordinator agent
-//! that can spawn workers and delegate tasks.
+mod app;
+mod client;
+mod ui;
 
 use anyhow::Result;
 use crossterm::{
-    event::{self, Event, KeyCode, KeyEventKind},
+    event::{self, Event, KeyCode},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{
-    backend::CrosstermBackend,
-    Terminal,
-};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use std::io;
 
-mod app;
-mod coordinator;
-mod ui;
-
 use app::App;
+use client::AgentClient;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Get API keys
-    let openai_key = std::env::var("OPENAI_API_KEY")
-        .expect("OPENAI_API_KEY must be set");
-    let anthropic_key = std::env::var("ANTHROPIC_API_KEY")
-        .ok(); // Optional
-
     // Setup terminal
     enable_raw_mode()?;
     let mut stdout = io::stdout();
@@ -36,65 +23,56 @@ async fn main() -> Result<()> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    // Create coordinator and app
-    let coordinator = coordinator::setup_coordinator(openai_key, anthropic_key).await?;
-    let mut app = App::new(coordinator);
+    // Create HTTP client
+    let client = AgentClient::new("http://localhost:3000");
+    
+    // Create agent via API
+    let agent = client.create_agent("gpt-4").await?;
 
-    // Run app
-    let res = run_app(&mut terminal, &mut app).await;
+    // Create app
+    let mut app = App::new(client, agent.id);
 
-    // Restore terminal
-    disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen
-    )?;
-    terminal.show_cursor()?;
-
-    if let Err(err) = res {
-        eprintln!("Error: {:?}", err);
-    }
-
-    Ok(())
-}
-
-async fn run_app<B: ratatui::backend::Backend>(
-    terminal: &mut Terminal<B>,
-    app: &mut App,
-) -> Result<()> {
+    // Main loop
     loop {
-        terminal.draw(|f| ui::draw(f, app))?;
+        terminal.draw(|f| ui::render(f, &app))?;
 
-        // Handle events with timeout to allow streaming updates
         if event::poll(std::time::Duration::from_millis(100))? {
             if let Event::Key(key) = event::read()? {
-                if key.kind == KeyEventKind::Press {
-                    match key.code {
-                        KeyCode::Char('q') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
-                            return Ok(());
-                        }
-                        KeyCode::Enter => {
-                            app.submit_message().await?;
-                        }
-                        KeyCode::Char(c) => {
-                            app.input_char(c);
-                        }
-                        KeyCode::Backspace => {
-                            app.delete_char();
-                        }
-                        KeyCode::Up => {
-                            app.scroll_up();
-                        }
-                        KeyCode::Down => {
-                            app.scroll_down();
-                        }
-                        _ => {}
+                match key.code {
+                    KeyCode::Char('q') if key.modifiers.contains(event::KeyModifiers::CONTROL) => {
+                        break;
                     }
+                    KeyCode::Enter => {
+                        if !app.input.is_empty() {
+                            let message = app.input.drain(..).collect();
+                            app.send_message(message).await?;
+                        }
+                    }
+                    KeyCode::Char(c) => {
+                        app.input.push(c);
+                    }
+                    KeyCode::Backspace => {
+                        app.input.pop();
+                    }
+                    KeyCode::Up => {
+                        app.scroll_up();
+                    }
+                    KeyCode::Down => {
+                        app.scroll_down();
+                    }
+                    _ => {}
                 }
             }
         }
 
-        // Process any pending streaming events
-        app.process_stream().await?;
+        // Process any pending stream events
+        app.process_stream_events().await?;
     }
+
+    // Cleanup
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+
+    Ok(())
 }

@@ -1,213 +1,116 @@
 //! Application state and logic
 
-use agent_runtime::{Agent, AgentEvent};
 use anyhow::Result;
-use chrono::{DateTime, Utc};
 use futures::StreamExt;
-use std::sync::Arc;
-use tokio::sync::mpsc;
+use std::pin::Pin;
+use tokio_stream::Stream;
+
+use crate::client::{AgentClient, StreamEvent};
 
 #[derive(Debug, Clone)]
 pub struct Message {
-    pub role: MessageRole,
+    pub role: String,
     pub content: String,
-    pub timestamp: DateTime<Utc>,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum MessageRole {
-    User,
-    Agent,
-    System,
-}
-
-impl Message {
-    pub fn user(content: String) -> Self {
-        Self {
-            role: MessageRole::User,
-            content,
-            timestamp: Utc::now(),
-        }
-    }
-
-    pub fn agent(content: String) -> Self {
-        Self {
-            role: MessageRole::Agent,
-            content,
-            timestamp: Utc::now(),
-        }
-    }
-
-    pub fn system(content: String) -> Self {
-        Self {
-            role: MessageRole::System,
-            content,
-            timestamp: Utc::now(),
-        }
-    }
+    pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
 pub struct App {
-    pub coordinator: Arc<Agent>,
+    client: AgentClient,
+    agent_id: String,
     pub messages: Vec<Message>,
     pub input: String,
-    pub scroll: usize,
-    pub streaming: bool,
-    pub current_response: String,
-    stream_rx: Option<mpsc::UnboundedReceiver<StreamUpdate>>,
-}
-
-enum StreamUpdate {
-    TextChunk(String),
-    ToolCall { name: String, params: String },
-    ToolResult { name: String, success: bool },
-    Done,
-    Error(String),
+    pub scroll_offset: usize,
+    pub streaming_content: String,
+    pub is_streaming: bool,
+    stream: Option<Pin<Box<dyn Stream<Item = Result<StreamEvent>> + Send>>>,
 }
 
 impl App {
-    pub fn new(coordinator: Arc<Agent>) -> Self {
+    pub fn new(client: AgentClient, agent_id: String) -> Self {
         Self {
-            coordinator,
-            messages: vec![
-                Message::system("🤖 Agent TUI Ready".to_string()),
-                Message::system("Type your message and press Enter. Press Ctrl+Q to quit.".to_string()),
-            ],
+            client,
+            agent_id,
+            messages: Vec::new(),
             input: String::new(),
-            scroll: 0,
-            streaming: false,
-            current_response: String::new(),
-            stream_rx: None,
+            scroll_offset: 0,
+            streaming_content: String::new(),
+            is_streaming: false,
+            stream: None,
         }
-    }
-
-    pub fn input_char(&mut self, c: char) {
-        self.input.push(c);
-    }
-
-    pub fn delete_char(&mut self) {
-        self.input.pop();
     }
 
     pub fn scroll_up(&mut self) {
-        self.scroll = self.scroll.saturating_sub(1);
+        if self.scroll_offset > 0 {
+            self.scroll_offset -= 1;
+        }
     }
 
     pub fn scroll_down(&mut self) {
-        self.scroll = self.scroll.saturating_add(1);
+        self.scroll_offset += 1;
     }
 
-    pub async fn submit_message(&mut self) -> Result<()> {
-        if self.input.is_empty() || self.streaming {
-            return Ok(());
-        }
-
-        let user_input = self.input.clone();
-        self.input.clear();
-        
+    pub async fn send_message(&mut self, content: String) -> Result<()> {
         // Add user message
-        self.messages.push(Message::user(user_input.clone()));
+        self.messages.push(Message {
+            role: "user".to_string(),
+            content: content.clone(),
+            timestamp: chrono::Utc::now(),
+        });
 
-        // Start streaming
-        self.streaming = true;
-        self.current_response.clear();
+        // Start streaming response
+        self.streaming_content.clear();
+        self.is_streaming = true;
 
-        // Create channel for stream updates
-        let (tx, rx) = mpsc::unbounded_channel();
-        self.stream_rx = Some(rx);
+        let stream = self.client.stream_message(&self.agent_id, &content).await?;
+        self.stream = Some(stream);
 
-        // Spawn task to handle streaming
-        let coordinator = self.coordinator.clone();
-        tokio::spawn(async move {
-            match coordinator.run_stream(&user_input).await {
-                Ok(mut stream) => {
-                    while let Some(event_result) = stream.next().await {
-                        match event_result {
-                            Ok(event) => {
-                                let update = match event {
-                                    AgentEvent::TextChunk { content } => {
-                                        StreamUpdate::TextChunk(content)
-                                    }
-                                    AgentEvent::ToolCallStart { tool_name, parameters } => {
-                                        StreamUpdate::ToolCall {
-                                            name: tool_name,
-                                            params: parameters.to_string(),
-                                        }
-                                    }
-                                    AgentEvent::ToolCallEnd { tool_name, success, .. } => {
-                                        StreamUpdate::ToolResult {
-                                            name: tool_name,
-                                            success,
-                                        }
-                                    }
-                                    AgentEvent::Done { .. } => {
-                                        StreamUpdate::Done
-                                    }
-                                    AgentEvent::Error { message } => {
-                                        StreamUpdate::Error(message)
-                                    }
-                                    AgentEvent::Thinking { .. } => continue,
-                                };
-                                
-                                if tx.send(update).is_err() {
-                                    break;
-                                }
+        Ok(())
+    }
+
+    pub async fn process_stream_events(&mut self) -> Result<()> {
+        if let Some(stream) = &mut self.stream {
+            // Try to get one event (non-blocking)
+            if let Some(event_result) = stream.next().await {
+                match event_result {
+                    Ok(event) => {
+                        match event {
+                            StreamEvent::TextChunk { content } => {
+                                self.streaming_content.push_str(&content);
                             }
-                            Err(e) => {
-                                let _ = tx.send(StreamUpdate::Error(e.to_string()));
-                                break;
+                            StreamEvent::ToolCall { name, .. } => {
+                                self.streaming_content.push_str(&format!("\n[🔧 Tool: {}]\n", name));
+                            }
+                            StreamEvent::ToolResult { name, success } => {
+                                let status = if success { "✓" } else { "✗" };
+                                self.streaming_content.push_str(&format!("[{} {}]\n", status, name));
+                            }
+                            StreamEvent::Done { .. } => {
+                                // Add agent message
+                                self.messages.push(Message {
+                                    role: "agent".to_string(),
+                                    content: self.streaming_content.clone(),
+                                    timestamp: chrono::Utc::now(),
+                                });
+                                self.streaming_content.clear();
+                                self.is_streaming = false;
+                                self.stream = None;
+                            }
+                            StreamEvent::Error { message } => {
+                                self.streaming_content.push_str(&format!("\n[Error: {}]\n", message));
+                                self.is_streaming = false;
+                                self.stream = None;
                             }
                         }
                     }
-                }
-                Err(e) => {
-                    let _ = tx.send(StreamUpdate::Error(e.to_string()));
-                }
-            }
-        });
-
-        Ok(())
-    }
-
-    pub async fn process_stream(&mut self) -> Result<()> {
-        if let Some(rx) = &mut self.stream_rx {
-            while let Ok(update) = rx.try_recv() {
-                match update {
-                    StreamUpdate::TextChunk(content) => {
-                        self.current_response.push_str(&content);
-                    }
-                    StreamUpdate::ToolCall { name, params } => {
-                        self.current_response.push_str(&format!("\n[🔧 Tool: {} {}]\n", name, params));
-                    }
-                    StreamUpdate::ToolResult { name, success } => {
-                        let status = if success { "✓" } else { "✗" };
-                        self.current_response.push_str(&format!("[{} {}]\n", status, name));
-                    }
-                    StreamUpdate::Done => {
-                        self.messages.push(Message::agent(self.current_response.clone()));
-                        self.current_response.clear();
-                        self.streaming = false;
-                        self.stream_rx = None;
-                        break;
-                    }
-                    StreamUpdate::Error(msg) => {
-                        self.messages.push(Message::system(format!("❌ Error: {}", msg)));
-                        self.current_response.clear();
-                        self.streaming = false;
-                        self.stream_rx = None;
-                        break;
+                    Err(e) => {
+                        self.streaming_content.push_str(&format!("\n[Stream error: {}]\n", e));
+                        self.is_streaming = false;
+                        self.stream = None;
                     }
                 }
             }
         }
-        Ok(())
-    }
 
-    pub fn visible_content(&self) -> String {
-        if self.streaming && !self.current_response.is_empty() {
-            self.current_response.clone()
-        } else {
-            String::new()
-        }
+        Ok(())
     }
 }
