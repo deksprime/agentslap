@@ -8,6 +8,7 @@ use std::pin::Pin;
 use tokio_stream::Stream;
 
 /// Agent server API client
+#[derive(Clone)]
 pub struct AgentClient {
     base_url: String,
     client: reqwest::Client,

@@ -84,7 +84,12 @@ fn draw_messages(f: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_input(f: &mut Frame, app: &App, area: Rect) {
-    let input_text = if app.is_streaming {
+    let input_text = if app.is_connecting {
+        Span::styled(
+            "⏳ Connecting to server...",
+            Style::default().fg(Color::Yellow).add_modifier(Modifier::ITALIC),
+        )
+    } else if app.is_streaming {
         Span::styled(
             "⏳ Waiting for response...",
             Style::default().fg(Color::Yellow).add_modifier(Modifier::ITALIC),
@@ -103,8 +108,8 @@ fn draw_input(f: &mut Frame, app: &App, area: Rect) {
 
     f.render_widget(input_widget, area);
 
-    // Set cursor position if not streaming
-    if !app.is_streaming {
+    // Set cursor position if not streaming or connecting
+    if !app.is_streaming && !app.is_connecting {
         f.set_cursor_position((
             area.x + app.input.len() as u16 + 1,
             area.y + 1,
@@ -113,7 +118,12 @@ fn draw_input(f: &mut Frame, app: &App, area: Rect) {
 }
 
 fn draw_status(f: &mut Frame, app: &App, area: Rect) {
-    let status_text = if app.is_streaming {
+    let status_text = if app.is_connecting {
+        Span::styled(
+            " 🔌 Connecting... | Ctrl+Q to quit ",
+            Style::default().fg(Color::Cyan).bg(Color::DarkGray),
+        )
+    } else if app.is_streaming {
         Span::styled(
             " 🔄 Streaming... | Ctrl+Q to quit ",
             Style::default().fg(Color::Yellow).bg(Color::DarkGray),

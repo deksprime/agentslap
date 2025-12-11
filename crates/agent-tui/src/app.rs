@@ -3,6 +3,7 @@
 use anyhow::Result;
 use futures::StreamExt;
 use std::pin::Pin;
+use tokio::sync::oneshot;
 use tokio_stream::Stream;
 
 use crate::client::{AgentClient, StreamEvent};
@@ -14,6 +15,8 @@ pub struct Message {
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
 
+type StreamType = Pin<Box<dyn Stream<Item = Result<StreamEvent>> + Send>>;
+
 pub struct App {
     client: AgentClient,
     agent_id: String,
@@ -22,7 +25,9 @@ pub struct App {
     pub scroll_offset: usize,
     pub streaming_content: String,
     pub is_streaming: bool,
-    stream: Option<Pin<Box<dyn Stream<Item = Result<StreamEvent>> + Send>>>,
+    pub is_connecting: bool,  // New: shows "Connecting..." state
+    stream: Option<StreamType>,
+    pending_stream: Option<oneshot::Receiver<Result<StreamType>>>,
 }
 
 impl App {
@@ -35,7 +40,9 @@ impl App {
             scroll_offset: 0,
             streaming_content: String::new(),
             is_streaming: false,
+            is_connecting: false,
             stream: None,
+            pending_stream: None,
         }
     }
 
@@ -49,27 +56,68 @@ impl App {
         self.scroll_offset += 1;
     }
 
-    pub async fn send_message(&mut self, content: String) -> Result<()> {
-        // Add user message
+    /// Send message - NON-BLOCKING!
+    pub fn send_message(&mut self, content: String) {
+        // Add user message immediately (instant feedback!)
         self.messages.push(Message {
             role: "user".to_string(),
             content: content.clone(),
             timestamp: chrono::Utc::now(),
         });
 
-        // Start streaming response
+        // Mark as connecting
+        self.is_connecting = true;
         self.streaming_content.clear();
-        self.is_streaming = true;
 
-        let stream = self.client.stream_message(&self.agent_id, &content).await?;
-        self.stream = Some(stream);
+        // Spawn HTTP call in background task
+        let (tx, rx) = oneshot::channel();
+        let client = self.client.clone();
+        let agent_id = self.agent_id.clone();
 
-        Ok(())
+        tokio::spawn(async move {
+            let result = client.stream_message(&agent_id, &content).await;
+            let _ = tx.send(result);
+        });
+
+        self.pending_stream = Some(rx);
     }
 
     pub async fn process_stream_events(&mut self) -> Result<()> {
+        // Check if stream arrived from background task
+        if let Some(rx) = &mut self.pending_stream {
+            match rx.try_recv() {
+                Ok(Ok(stream)) => {
+                    // Stream ready!
+                    self.stream = Some(stream);
+                    self.pending_stream = None;
+                    self.is_connecting = false;
+                    self.is_streaming = true;
+                }
+                Ok(Err(e)) => {
+                    // HTTP error
+                    self.streaming_content = format!("Error: {}", e);
+                    self.messages.push(Message {
+                        role: "agent".to_string(),
+                        content: self.streaming_content.clone(),
+                        timestamp: chrono::Utc::now(),
+                    });
+                    self.streaming_content.clear();
+                    self.pending_stream = None;
+                    self.is_connecting = false;
+                }
+                Err(oneshot::error::TryRecvError::Empty) => {
+                    // Still waiting for HTTP response
+                }
+                Err(oneshot::error::TryRecvError::Closed) => {
+                    // Task died
+                    self.pending_stream = None;
+                    self.is_connecting = false;
+                }
+            }
+        }
+
+        // Process stream events if we have a stream
         if let Some(stream) = &mut self.stream {
-            // Try to get one event (non-blocking)
             if let Some(event_result) = stream.next().await {
                 match event_result {
                     Ok(event) => {
