@@ -12,6 +12,7 @@ members = [
     "crates/agent-mcp",
     "crates/agent-comms",
     "crates/agent-telemetry",
+    "crates/agent-coordination",
     "crates/agent-cli",
 ]
 

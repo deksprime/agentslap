@@ -37,13 +37,11 @@ pub mod agent;
 pub mod error;
 pub mod parser;
 pub mod stream;
-pub mod factory;
 
 // Re-exports
 pub use agent::{Agent, AgentBuilder, AgentConfig};
 pub use error::{AgentRuntimeError, Result};
 pub use stream::AgentEvent;
-pub use factory::{AgentFactory, RoleConfig};
 
 #[cfg(test)]
 mod tests {

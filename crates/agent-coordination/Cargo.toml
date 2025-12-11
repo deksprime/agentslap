@@ -1,0 +1,39 @@
+[package]
+name = "agent-coordination"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+# UUID
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Concurrent data structures
+dashmap = { workspace = true }
+
+# Core crates
+agent-core = { path = "../agent-core" }
+agent-llm = { path = "../agent-llm" }
+agent-runtime = { path = "../agent-runtime" }
+agent-session = { path = "../agent-session" }
+agent-tools = { path = "../agent-tools" }
+agent-hitl = { path = "../agent-hitl" }
+agent-comms = { path = "../agent-comms" }
+
+[dev-dependencies]
+tokio-test = "0.4"

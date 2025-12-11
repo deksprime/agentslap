@@ -27,6 +27,8 @@ pub mod transport;
 pub mod registry;
 pub mod context;
 pub mod coordinator;
+pub mod hierarchy;
+pub mod delegation;
 
 // In-process transport
 pub mod in_process;
@@ -42,7 +44,11 @@ pub use message::{AgentMessage, MessageType};
 pub use transport::MessageTransport;
 pub use registry::AgentRegistry;
 pub use context::AgentContext;
-pub use coordinator::AgentCoordinator;
+pub use coordinator::{AgentCoordinator, AgentHandle};
+pub use hierarchy::{AgentHierarchy, AgentRole};
+pub use delegation::{
+    CoordinationPattern, DelegationRequest, DelegationResult, EscalationRequest,
+};
 
 pub use in_process::InProcessTransport;
 

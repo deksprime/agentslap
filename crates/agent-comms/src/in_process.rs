@@ -125,6 +125,10 @@ impl MessageTransport for InProcessTransport {
     fn name(&self) -> &str {
         "in_process"
     }
+    
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 #[cfg(test)]
