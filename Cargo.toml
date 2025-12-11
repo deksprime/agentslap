@@ -11,7 +11,9 @@ members = [
     "crates/agent-context",
     "crates/agent-mcp",
     "crates/agent-comms",
-    "crates/agent-cli",
+    "crates/agent-telemetry",
+    "crates/agent-coordination",
+    "crates/agent-cli", "crates/agent-tui",
 ]
 
 [workspace.package]

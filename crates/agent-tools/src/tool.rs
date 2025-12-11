@@ -4,6 +4,9 @@ use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[cfg(feature = "coordination")]
+use std::sync::Arc;
+
 use crate::{Result, ToolSchema};
 
 /// Risk level for a tool
@@ -18,6 +21,44 @@ pub enum ToolRiskLevel {
     High,
     /// Critical risk - system-level operations (execute code, shell commands)
     Critical,
+}
+
+/// Context provided to tools during execution
+///
+/// Contains agent-specific information and optional coordinator access
+/// for coordination tools.
+#[derive(Clone)]
+pub struct ToolContext {
+    /// The ID of the agent executing the tool
+    pub agent_id: String,
+    
+    /// Optional coordinator for multi-agent features
+    /// Only available when coordination feature is enabled
+    #[cfg(feature = "coordination")]
+    pub coordinator: Option<Arc<agent_comms::AgentCoordinator>>,
+}
+
+impl ToolContext {
+    /// Create a new ToolContext
+    pub fn new(agent_id: impl Into<String>) -> Self {
+        Self {
+            agent_id: agent_id.into(),
+            #[cfg(feature = "coordination")]
+            coordinator: None,
+        }
+    }
+    
+    /// Create a ToolContext with coordinator
+    #[cfg(feature = "coordination")]
+    pub fn with_coordinator(
+        agent_id: impl Into<String>,
+        coordinator: Arc<agent_comms::AgentCoordinator>,
+    ) -> Self {
+        Self {
+            agent_id: agent_id.into(),
+            coordinator: Some(coordinator),
+        }
+    }
 }
 
 /// Result of a tool execution
@@ -100,6 +141,23 @@ pub trait Tool: Send + Sync {
         ToolRiskLevel::Low  // Default: safe
     }
 
+    /// Execute the tool with given parameters and context
+    ///
+    /// # Arguments
+    /// * `params` - JSON value containing the tool parameters
+    /// * `context` - Optional context with agent ID and coordinator
+    ///
+    /// # Returns
+    /// A ToolResult containing the execution result or error
+    async fn execute_with_context(
+        &self,
+        params: Value,
+        _context: Option<&ToolContext>,
+    ) -> Result<ToolResult> {
+        // Default: delegate to execute() for backwards compatibility
+        self.execute(params).await
+    }
+
     /// Execute the tool with given parameters
     ///
     /// # Arguments
@@ -107,7 +165,14 @@ pub trait Tool: Send + Sync {
     ///
     /// # Returns
     /// A ToolResult containing the execution result or error
-    async fn execute(&self, params: Value) -> Result<ToolResult>;
+    ///
+    /// # Note
+    /// This is a compatibility method. New tools should implement
+    /// `execute_with_context` instead. This method calls `execute_with_context`
+    /// with None context.
+    async fn execute(&self, params: Value) -> Result<ToolResult> {
+        self.execute_with_context(params, None).await
+    }
 }
 
 #[cfg(test)]

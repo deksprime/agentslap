@@ -1,5 +1,5 @@
 [package]
-name = "agent-tools"
+name = "agent-coordination"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
@@ -17,28 +17,24 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 
-# Async trait support
-async-trait = "0.1"
-
-# JSON Schema generation
-schemars = "0.8"
-
 # Logging
 tracing = { workspace = true }
 
-# Utilities
-chrono = { version = "0.4", features = ["serde"] }
+# UUID
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Concurrent data structures
 dashmap = { workspace = true }
 
 # Core crates
 agent-core = { path = "../agent-core" }
-
-# Communication (for coordination tools)
-agent-comms = { path = "../agent-comms", optional = true }
-
-[features]
-default = ["coordination"]
-coordination = ["agent-comms"]
+agent-llm = { path = "../agent-llm" }
+agent-runtime = { path = "../agent-runtime" }
+agent-session = { path = "../agent-session" }
+agent-tools = { path = "../agent-tools" }
+agent-hitl = { path = "../agent-hitl" }
+agent-comms = { path = "../agent-comms" }
 
 [dev-dependencies]
 tokio-test = "0.4"
+tracing-subscriber = "0.3"

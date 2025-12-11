@@ -67,10 +67,9 @@ impl ToolRegistry {
     /// * `params` - JSON parameters for the tool
     ///
     /// # Returns
-    /// The result of the tool execution
+    /// Execute a tool by name with parameters
     pub async fn execute(&self, name: &str, params: Value) -> Result<ToolResult> {
-        let tool = self
-            .get_tool(name)
+        let tool = self.get_tool(name)
             .ok_or_else(|| ToolError::not_found(name))?;
 
         tracing::info!("Executing tool: {} with params: {}", name, params);
@@ -85,6 +84,20 @@ impl ToolRegistry {
                 Err(e)
             }
         }
+    }
+
+    /// Execute a tool by name with parameters and context
+    pub async fn execute_with_context(
+        &self,
+        name: &str,
+        params: Value,
+        context: Option<&crate::ToolContext>,
+    ) -> Result<ToolResult> {
+        let tool = self.get_tool(name)
+            .ok_or_else(|| ToolError::not_found(name))?;
+
+        tracing::info!("Executing tool: {} with context", name);
+        tool.execute_with_context(params, context).await
     }
 
     /// List all registered tool names

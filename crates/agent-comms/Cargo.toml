@@ -32,11 +32,21 @@ uuid = { version = "1.11", features = ["v4", "serde"] }
 # Concurrent data structures
 dashmap = { workspace = true }
 
+# Shared context types
+agent-context = { path = "../agent-context" }
+
 # Futures
 futures = "0.3"
 
+# HTTP client (optional, for HttpTransport)
+reqwest = { workspace = true, optional = true }
+
 # Core crates
 agent-core = { path = "../agent-core" }
+
+[features]
+default = []
+http = ["dep:reqwest"]
 
 [dev-dependencies]
 tokio-test = "0.4"

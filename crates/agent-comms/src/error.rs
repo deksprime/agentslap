@@ -19,6 +19,10 @@ pub enum CommsError {
     /// Timeout waiting for response
     #[error("Request timed out after {0:?}")]
     Timeout(std::time::Duration),
+    
+    /// Permission denied (hierarchy/role violation)
+    #[error("Permission denied: {0}")]
+    Permission(String),
 
     /// Serialization error
     #[error("Serialization error: {0}")]
@@ -27,6 +31,10 @@ pub enum CommsError {
     /// Transport error
     #[error("Transport error: {0}")]
     Transport(String),
+    
+    /// Other error
+    #[error("{0}")]
+    Other(String),
 
     /// Generic error from agent-core
     #[error(transparent)]
@@ -42,6 +50,11 @@ impl CommsError {
     /// Create a delivery failed error
     pub fn delivery_failed<S: Into<String>>(msg: S) -> Self {
         Self::DeliveryFailed(msg.into())
+    }
+    
+    /// Create a generic other error
+    pub fn other<S: Into<String>>(msg: S) -> Self {
+        Self::Other(msg.into())
     }
 }
 

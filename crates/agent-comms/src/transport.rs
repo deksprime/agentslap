@@ -27,6 +27,9 @@ pub trait MessageTransport: Send + Sync {
 
     /// Get transport name
     fn name(&self) -> &str;
+    
+    /// Downcast to concrete type for specific transport features
+    fn as_any(&self) -> &dyn std::any::Any;
 }
 
 

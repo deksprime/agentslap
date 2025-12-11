@@ -33,9 +33,9 @@ pub mod builtin;
 
 // Re-exports
 pub use error::{ToolError, Result};
-pub use tool::{Tool, ToolResult, ToolRiskLevel};
+pub use tool::{Tool, ToolResult, ToolRiskLevel, ToolContext};
+pub use schema::{ToolSchema, property};
 pub use registry::ToolRegistry;
-pub use schema::ToolSchema;
 
 #[cfg(test)]
 mod tests {
