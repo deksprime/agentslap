@@ -113,6 +113,18 @@ impl AgentFactory {
         tools.register(agent_tools::builtin::CurrentTimeTool)
             .map_err(|e| CoordinationError::other(format!("Tool registration failed: {}", e)))?;
 
+        // Register communication tools for multi-agent coordination
+        tools.register(agent_tools::builtin::DelegateTaskTool)
+            .map_err(|e| CoordinationError::other(format!("Tool registration failed: {}", e)))?;
+        tools.register(agent_tools::builtin::EscalateTool)
+            .map_err(|e| CoordinationError::other(format!("Tool registration failed: {}", e)))?;
+        tools.register(agent_tools::builtin::BroadcastToTeamTool)
+            .map_err(|e| CoordinationError::other(format!("Tool registration failed: {}", e)))?;
+        tools.register(agent_tools::builtin::SendMessageTool)
+            .map_err(|e| CoordinationError::other(format!("Tool registration failed: {}", e)))?;
+        
+        tracing::info!("Registered {} tools including coordination tools for agent {}", tools.count(), agent_id);
+
         // Build agent with concrete provider type
         let agent = match role_config.provider.as_str() {
             "openai" => {
@@ -129,6 +141,7 @@ impl AgentFactory {
                     .session_id(&agent_id)
                     .system_message(&role_config.system_message)
                     .max_iterations(role_config.max_iterations)
+                    .coordinator(self.coordinator.clone())
                     .build()
                     .map_err(|e| CoordinationError::other(format!("Agent build failed: {}", e)))?
             }
@@ -146,6 +159,7 @@ impl AgentFactory {
                     .session_id(&agent_id)
                     .system_message(&role_config.system_message)
                     .max_iterations(role_config.max_iterations)
+                    .coordinator(self.coordinator.clone())
                     .build()
                     .map_err(|e| CoordinationError::other(format!("Agent build failed: {}", e)))?
             }

@@ -56,6 +56,9 @@ pub struct Agent {
     
     /// Human-in-the-loop approval strategy (optional)
     hitl: Option<Arc<dyn ApprovalStrategy>>,
+    
+    /// Optional coordinator for multi-agent tools
+    coordinator: Option<Arc<dyn agent_context::CoordinatorHandle>>,
 }
 
 impl Agent {
@@ -521,6 +524,28 @@ impl Agent {
         // Execute tool (either approved or didn't need approval)
         tracing::info!("Executing tool: {} with params: {}", tool_call.name, tool_call.parameters);
 
+        // Try to create ToolContext with coordinator if available
+        if let (Some(agent_id), Some(coordinator_handle)) = (&self.config.session_id, &self.coordinator) {
+            // Downcast to AgentCoordinator
+            if let Some(coordinator) = coordinator_handle.as_any().downcast_ref::<agent_comms::AgentCoordinator>() {
+                // We have a coordinator - create proper ToolContext
+                let context = agent_tools::ToolContext::with_coordinator(
+                    agent_id.clone(),
+                    std::sync::Arc::new(coordinator.clone()),
+                );
+                
+                tracing::debug!("Executing tool with coordinator context");
+                
+                // Execute with context
+                return self.tools
+                    .execute_with_context(&tool_call.name, tool_call.parameters.clone(), Some(&context))
+                    .await
+                    .map_err(|e| e.into());
+            }
+        }
+
+        // No coordinator or not downcast-able - execute without context
+        tracing::debug!("Executing tool without coordinator context");
         self.tools
             .execute(&tool_call.name, tool_call.parameters.clone())
             .await
@@ -557,6 +582,7 @@ pub struct AgentBuilder {
     tools: Option<Arc<ToolRegistry>>,
     session_store: Option<Arc<dyn SessionStore>>,
     hitl: Option<Arc<dyn ApprovalStrategy>>,
+    coordinator: Option<Arc<dyn agent_context::CoordinatorHandle>>,
     config: AgentConfig,
 }
 
@@ -568,6 +594,7 @@ impl AgentBuilder {
             tools: None,
             session_store: None,
             hitl: None,
+            coordinator: None,
             config: AgentConfig::default(),
         }
     }
@@ -614,6 +641,12 @@ impl AgentBuilder {
         self
     }
 
+    /// Set coordinator for multi-agent tools
+    pub fn coordinator<C: agent_context::CoordinatorHandle + 'static>(mut self, coordinator: Arc<C>) -> Self {
+        self.coordinator = Some(coordinator);
+        self
+    }
+
     /// Set system message
     pub fn system_message<S: Into<String>>(mut self, msg: S) -> Self {
         self.config.system_message = Some(msg.into());
@@ -638,6 +671,7 @@ impl AgentBuilder {
             session_store,
             config: self.config,
             hitl: self.hitl,
+            coordinator: self.coordinator,
         })
     }
 }

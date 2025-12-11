@@ -32,6 +32,9 @@ uuid = { version = "1.11", features = ["v4", "serde"] }
 # Concurrent data structures
 dashmap = { workspace = true }
 
+# Shared context types
+agent-context = { path = "../agent-context" }
+
 # Futures
 futures = "0.3"
 

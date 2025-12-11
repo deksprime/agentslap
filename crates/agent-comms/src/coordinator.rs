@@ -26,6 +26,7 @@ pub struct AgentHandle {
 /// - Message routing based on hierarchy
 /// - Delegation patterns (task assignment, escalation, broadcast)
 /// - Team-based communication
+#[derive(Clone)]
 pub struct AgentCoordinator {
     /// Agent registry for discovery
     registry: Arc<AgentRegistry>,
@@ -41,6 +42,13 @@ pub struct AgentCoordinator {
     
     /// Pending delegations (task_id -> delegation request)
     pending_delegations: Arc<DashMap<String, DelegationRequest>>,
+}
+
+// Implement CoordinatorHandle to allow passing to agent-runtime without circular dep
+impl agent_context::CoordinatorHandle for AgentCoordinator {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 impl AgentCoordinator {

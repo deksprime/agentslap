@@ -29,6 +29,7 @@ async-stream = "0.3"
 
 # Core crates (NO CIRCULAR DEPENDENCIES!)
 agent-core = { path = "../agent-core" }
+agent-context = { path = "../agent-context" }
 agent-llm = { path = "../agent-llm" }
 agent-session = { path = "../agent-session" }
 agent-tools = { path = "../agent-tools" }
