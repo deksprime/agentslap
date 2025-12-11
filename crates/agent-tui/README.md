@@ -1,65 +1,51 @@
-# Agent TUI
+# Agent TUI (HTTP Client)
 
-Interactive terminal interface for chatting with a coordinator agent that can spawn workers and delegate tasks.
+**Pure HTTP client** for agent-server with streaming support.
+
+## Quick Start
+
+```bash
+# Terminal 1: Start server
+export OPENAI_API_KEY=sk-...
+cargo run -p agent-server
+
+# Terminal 2: Start TUI
+cargo run -p agent-tui
+```
+
+TUI will:
+1. Connect to `http://localhost:3000`
+2. Create a GPT-4 agent via API
+3. Stream responses in real-time
+
+## Architecture
+
+```
+TUI (HTTP Client)          agent-server
+    ↓ HTTP                     ↓
+POST /agents            Create agent
+POST /agents/:id/stream  ← SSE streaming
+```
 
 ## Features
 
-- 💬 **Real-time Chat** - Talk to a GPT-4 coordinator agent
-- 🌊 **Streaming Responses** - See agent responses appear character-by-character
-- 🔧 **Tool Visualization** - See when tools are being called
-- 🎨 **Beautiful UI** - Built with ratatui for a polished experience
-- 🤖 **Multi-Agent Coordination** - Coordinator can delegate to worker agents
-
-## Usage
-
-```bash
-# Set your OpenAI API key
-export OPENAI_API_KEY=sk-...
-
-# Optional: Anthropic for worker agents
-export ANTHROPIC_API_KEY=sk-ant-...
-
-# Run the TUI
-cargo run -p agent-tui
-
-# Or use the helper script
-./scripts/run_tui.sh
-```
+✅ Pure HTTP client (~300 LOC vs 500+)  
+✅ Server-Sent Events (SSE) streaming  
+✅ Character-by-character display  
+✅ Tool call visualization  
+✅ Clean separation - no business logic  
 
 ## Controls
 
-- **Type** - Enter your message
-- **Enter** - Send message
-- **↑/↓** - Scroll through conversation history
+- **Type** - Enter message
+- **Enter** - Send
+- **↑/↓** - Scroll
 - **Ctrl+Q** - Quit
 
-## What Happens
+## Implementation
 
-1. Coordinator agent spawns at startup with all coordination tools
-2. You type a message and press Enter
-3. Coordinator analyzes your request
-4. If complex, coordinator delegates to specialist workers using `delegate_task` tool
-5. Response streams back in real-time
-6. Tool calls are shown inline with visual indicators
+- [client.rs](file:///home/deks/new_agents/agentslap/crates/agent-tui/src/client.rs) - HTTP wrapper with reqwest
+- [app.rs](file:///home/deks/new_agents/agentslap/crates/agent-tui/src/app.rs) - State management
+- [ui.rs](file:///home/deks/new_agents/agentslap/crates/agent-tui/src/ui.rs) - Ratatui rendering
 
-## Example Session
-
-```
-You: Analyze Q4 sales performance across East and West regions
-
-Agent: [streaming...]
-I'll delegate this analysis to our regional specialists...
-[🔧 Tool: delegate_task {...}]
-[✓ delegate_task]
-Based on the analysis from our regional teams...
-[complete response]
-```
-
-## Features Demonstrated
-
-- ✅ Real coordinator agent (no mocks)
-- ✅ Streaming responses
-- ✅ Message history
-- ✅ Tool call visualization
-- ✅ Multi-agent coordination
-- ✅ Clean ratatui UI
+**No agent dependencies!** Pure UI code.

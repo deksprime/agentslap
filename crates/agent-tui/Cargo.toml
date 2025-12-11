@@ -10,23 +10,28 @@ name = "agent-tui"
 path = "src/main.rs"
 
 [dependencies]
-# Async runtime
-tokio = { workspace = true }
-
-# TUI
-ratatui = "0.29"
+# UI
+ratatui = "0.28"
 crossterm = "0.28"
 
-# Agent crates
-agent-coordination = { path = "../agent-coordination" }
-agent-runtime = { path = "../agent-runtime" }
-agent-comms = { path = "../agent-comms" }
-agent-llm = { path = "../agent-llm" }
-agent-session = { path = "../agent-session" }
-agent-hitl = { path = "../agent-hitl" }
-agent-tools = { path = "../agent-tools" }
-
-# Utilities
+# Async
+tokio = { workspace = true, features = ["full"] }
 futures = "0.3"
+
+# HTTP Client
+reqwest = { version = "0.12", features = ["json", "stream"] }
+tokio-stream = "0.1"
+eventsource-stream = "0.2"  # For SSE
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling
 anyhow = { workspace = true }
-chrono = "0.4"
+
+# Time
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID
+uuid = { version = "1.11", features = ["v4"] }
